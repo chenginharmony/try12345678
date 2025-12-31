@@ -1541,11 +1541,21 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
   // Challenge routes
   app.get('/api/challenges/public', async (req, res) => {
     try {
+      console.log("📥 Fetching public admin challenges...");
       const challenges = await storage.getPublicAdminChallenges();
+      console.log(`✅ Retrieved ${challenges.length} public challenges`);
       res.json(challenges);
-    } catch (error) {
-      console.error("Error fetching public challenges:", error);
-      res.status(500).json({ message: "Failed to fetch public challenges" });
+    } catch (error: any) {
+      console.error("❌ Error fetching public challenges:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack?.substring(0, 200)
+      });
+      res.status(500).json({ 
+        message: "Failed to fetch public challenges",
+        error: error?.message 
+      });
     }
   });
 
