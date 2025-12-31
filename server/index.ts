@@ -15,9 +15,6 @@ if (typeof window === 'undefined') {
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import "./eventScheduler"; // Start event lifecycle management
-import "./challengeScheduler"; // Start challenge lifecycle management
-import "./payoutWorker"; // Start payout batch processing
 import { addAuthTestRoutes } from "./authTest";
 import { createTelegramBot } from "./telegramBot";
 import { NotificationAlgorithmService } from "./notificationAlgorithm";
@@ -29,6 +26,36 @@ import fs from 'fs';
 import path from 'path';
 
 const app = express();
+
+export async function initAppForServerless() {
+  // Register routes and middleware required for API handling.
+  // This mirrors the setup done in the main startup flow but
+  // intentionally avoids starting background workers or listening on a port.
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      if (file.fieldname === 'coverImage' || file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  });
+
+  // Register routes (this will setup auth and route handlers)
+  await registerRoutes(app, upload);
+  addAuthTestRoutes(app);
+
+  // Initialize DB schema where needed (best-effort, errors are logged)
+  try {
+    await initializeDatabase();
+  } catch (error) {
+    console.error("❌ Failed to initialize database (serverless):", error);
+  }
+
+  return app;
+}
 
 // Configure multer for file uploads (memory storage)
 const upload = multer({ 
