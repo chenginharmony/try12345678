@@ -9,6 +9,7 @@ import { treasuryMatches, challenges, challengeParticipants, adminWalletTransact
 import { eq, and } from 'drizzle-orm';
 import { notifyTreasuryMatchSettled, sendAdminTreasurySummary } from './treasuryNotifications';
 import { getTreasuryDashboardSummary } from './treasuryManagement';
+import { creditTreasuryWallet } from './treasuryWalletService';
 
 /**
  * Settle a single Treasury match
@@ -73,6 +74,24 @@ export async function settleTreasuryMatch(
       status: 'completed',
       createdAt: new Date(),
     } as any);
+
+    // Credit Treasury wallet if Treasury won
+    if (treasuryWon && treasuryMatch.adminId) {
+      try {
+        const winAmount = payout - treasuryMatch.treasuryStaked; // Net profit
+        await creditTreasuryWallet(
+          treasuryMatch.adminId,
+          winAmount,
+          `Treasury match win settlement for challenge ${treasuryMatch.challengeId}`,
+          treasuryMatch.challengeId,
+          treasuryMatch.id
+        );
+        console.log(`✅ Credited ₦${winAmount.toLocaleString()} to admin ${treasuryMatch.adminId} Treasury wallet`);
+      } catch (error) {
+        console.error(`Error crediting Treasury wallet for admin ${treasuryMatch.adminId}:`, error);
+        // Don't throw - settlement should still complete even if wallet credit fails
+      }
+    }
 
     // Notify user about settlement
     const challenge = await db

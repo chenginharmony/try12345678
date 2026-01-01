@@ -6124,5 +6124,164 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Get Treasury wallet balance and summary
+  app.get('/api/admin/treasury/wallet', adminAuth, async (req: AdminAuthRequest, res) => {
+    try {
+      const adminId = req.user?.id;
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { getTreasuryWalletSummary, createOrGetTreasuryWallet } = await import('./treasuryWalletService');
+      
+      // Ensure wallet exists
+      await createOrGetTreasuryWallet(adminId);
+      const summary = await getTreasuryWalletSummary(adminId);
+
+      res.json(summary);
+    } catch (error) {
+      console.error('Get Treasury wallet error:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to get Treasury wallet' 
+      });
+    }
+  });
+
+  // Initiate Paystack deposit to Treasury wallet
+  app.post('/api/admin/treasury/wallet/deposit/initiate', adminAuth, async (req: AdminAuthRequest, res) => {
+    try {
+      const adminId = req.user?.id;
+      const { amount, email } = req.body;
+
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ message: 'Amount must be positive' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email required' });
+      }
+
+      // Initialize Paystack transaction
+      const response = await fetch('https://api.paystack.co/transaction/initialize', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          amount: Math.round(amount * 100), // Convert to cents
+          metadata: {
+            type: 'treasury_wallet_deposit',
+            adminId,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(400).json({ 
+          message: 'Failed to initiate payment',
+          error: data.message 
+        });
+      }
+
+      res.json({
+        authorizationUrl: data.data.authorization_url,
+        accessCode: data.data.access_code,
+        reference: data.data.reference,
+      });
+    } catch (error) {
+      console.error('Initiate Treasury deposit error:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to initiate deposit' 
+      });
+    }
+  });
+
+  // Verify Paystack payment and credit Treasury wallet
+  app.post('/api/admin/treasury/wallet/deposit/verify', adminAuth, async (req: AdminAuthRequest, res) => {
+    try {
+      const adminId = req.user?.id;
+      const { reference } = req.body;
+
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      if (!reference) {
+        return res.status(400).json({ message: 'Reference required' });
+      }
+
+      // Verify with Paystack
+      const response = await fetch(
+        `https://api.paystack.co/transaction/verify/${reference}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.data || data.data.status !== 'success') {
+        return res.status(400).json({ 
+          message: 'Payment verification failed',
+          error: data.message 
+        });
+      }
+
+      // Credit Treasury wallet
+      const { depositToTreasuryWallet } = await import('./treasuryWalletService');
+      const amount = data.data.amount / 100; // Convert from cents
+      
+      const newBalance = await depositToTreasuryWallet(
+        adminId,
+        amount,
+        reference
+      );
+
+      res.json({
+        success: true,
+        message: 'Treasury wallet credited successfully',
+        amount,
+        newBalance,
+      });
+    } catch (error) {
+      console.error('Verify Treasury deposit error:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to verify deposit' 
+      });
+    }
+  });
+
+  // Get Treasury wallet transaction history
+  app.get('/api/admin/treasury/wallet/transactions', adminAuth, async (req: AdminAuthRequest, res) => {
+    try {
+      const adminId = req.user?.id;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { getTreasuryWalletTransactions } = await import('./treasuryWalletService');
+      const transactions = await getTreasuryWalletTransactions(adminId, limit);
+
+      res.json(transactions);
+    } catch (error) {
+      console.error('Get Treasury wallet transactions error:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to get transactions' 
+      });
+    }
+  });
+
   return httpServer;
 }

@@ -17,6 +17,7 @@ import {
   generateShadowPersona,
   markPersonaUsedInChallenge,
 } from "./shadowPersonaGenerator";
+import { debitTreasuryWallet } from "./treasuryWalletService";
 
 /**
  * Get imbalance metrics for a challenge
@@ -209,6 +210,20 @@ export async function fulfillTreasuryMatches(
         throw new Error(
           `Treasury budget exceeded. Can only fund ${Math.floor(remainingBudget / user.amount)} more matches with ₦${remainingBudget}`
         );
+      }
+    }
+
+    // Debit Treasury wallet BEFORE creating matches
+    if (adminId) {
+      try {
+        await debitTreasuryWallet(
+          adminId,
+          totalStaked,
+          `Created ${matches.length} Treasury matches for challenge "${challengeTitle}"`,
+          challengeId
+        );
+      } catch (error) {
+        throw new Error(`Treasury wallet error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 

@@ -15,6 +15,8 @@ import {
   notifications,
   shadowPersonas,
   adminWalletTransactions,
+  treasuryWallets,
+  treasuryWalletTransactions,
 } from '../shared/schema';
 import { eq, and } from 'drizzle-orm';
 
@@ -671,11 +673,131 @@ async function testStep9_VerifySettlement(challengeId: number) {
 }
 
 // ============================================================================
-// STEP 10: Final Summary
+// STEP 9b: Verify Treasury Wallet Credit on Win
 // ============================================================================
 
-function testStep10_Summary() {
-  logStep(10, 'FINAL SUMMARY');
+async function testStep9b_VerifyWalletCredit(challengeId: number, adminId: string, result: boolean) {
+  logStep(9.5, 'VERIFY TREASURY WALLET CREDIT ON WIN');
+
+  try {
+    // Determine if Treasury won
+    // Matches were created with: realUserSide = 'YES', treasurySide = 'NO'
+    // Treasury wins if NO wins (result = false)
+    const treasuryWon = result === false; // true means YES won, false means NO won
+
+    if (!treasuryWon) {
+      logTest('Treasury lost this match', true, 'Expected behavior (no wallet credit)');
+      return { walletCredit: 0 };
+    }
+
+    // Get Treasury wallet for admin
+    const wallet = await db
+      .select()
+      .from(treasuryWallets)
+      .where(eq(treasuryWallets.adminId, adminId))
+      .limit(1);
+
+    const walletExists = wallet.length > 0;
+    logTest('Treasury wallet exists', walletExists, `Admin: ${adminId}`);
+
+    if (!walletExists) {
+      logError('Treasury wallet not found - wallet may not be created yet');
+      return { walletCredit: 0 };
+    }
+
+    const treasuryWallet = wallet[0];
+    logTest('Wallet balance is positive', treasuryWallet.balance > 0, `₦${treasuryWallet.balance}`);
+
+    // Get wallet transaction history
+    const transactions = await db
+      .select()
+      .from(treasuryWalletTransactions)
+      .where(
+        and(
+          eq(treasuryWalletTransactions.adminId, adminId),
+          eq(treasuryWalletTransactions.relatedChallengeId, challengeId)
+        )
+      );
+
+    logTest('Wallet transactions recorded', transactions.length > 0, `${transactions.length} transactions`);
+
+    // Check for credit transactions
+    const creditTransactions = transactions.filter(t => t.type === 'credit');
+    logTest('Credit transactions exist', creditTransactions.length > 0, `${creditTransactions.length} credits`);
+
+    // Verify debit happened first
+    const debitTransactions = transactions.filter(t => t.type === 'debit');
+    logTest('Debit transactions exist', debitTransactions.length > 0, `${debitTransactions.length} debits`);
+
+    if (creditTransactions.length > 0) {
+      const totalCredit = creditTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      logTest('Total credit amount is positive', totalCredit > 0, `₦${totalCredit.toLocaleString()}`);
+    }
+
+    return { walletCredit: treasuryWallet.balance, transactions: transactions.length };
+  } catch (error) {
+    logError(`Wallet credit verification failed: ${(error as Error).message}`);
+    return { walletCredit: 0 };
+  }
+}
+
+// ============================================================================
+// STEP 10: Verify Admin Can Withdraw from Wallet
+// ============================================================================
+
+async function testStep10_VerifyWalletOperations(adminId: string) {
+  logStep(10, 'VERIFY TREASURY WALLET OPERATIONS');
+
+  try {
+    // Check wallet exists
+    const wallet = await db
+      .select()
+      .from(treasuryWallets)
+      .where(eq(treasuryWallets.adminId, adminId))
+      .limit(1);
+
+    logTest('Admin has Treasury wallet', wallet.length > 0);
+
+    if (wallet.length === 0) {
+      logTest('Wallet creation skipped', false, 'Wallet service may not be initialized');
+      return { walletOperations: 'failed' };
+    }
+
+    const treasuryWallet = wallet[0];
+
+    // Verify wallet status
+    logTest('Wallet status is active', treasuryWallet.status === 'active', treasuryWallet.status);
+
+    // Verify totals are tracked
+    logTest('Total deposited is tracked', treasuryWallet.totalDeposited !== null);
+    logTest('Total used is tracked', treasuryWallet.totalUsed !== null);
+    logTest('Total earned is tracked', treasuryWallet.totalEarned !== null);
+
+    // Get all wallet transactions
+    const allTransactions = await db
+      .select()
+      .from(treasuryWalletTransactions)
+      .where(eq(treasuryWalletTransactions.adminId, adminId));
+
+    logTest('Transaction history recorded', allTransactions.length > 0, `${allTransactions.length} total transactions`);
+
+    // Verify transaction types
+    const transactionTypes = new Set(allTransactions.map(t => t.type));
+    logTest('Multiple transaction types recorded', transactionTypes.size >= 2, `Types: ${Array.from(transactionTypes).join(', ')}`);
+
+    return { walletOperations: 'success', transactions: allTransactions.length };
+  } catch (error) {
+    logError(`Wallet operations verification failed: ${(error as Error).message}`);
+    return { walletOperations: 'failed' };
+  }
+}
+
+// ============================================================================
+// STEP 11: Final Summary
+// ============================================================================
+
+function testStep11_Summary() {
+  logStep(11, 'FINAL SUMMARY');
 
   console.log(`
 ${colors.bright}TEST RESULTS${colors.reset}
@@ -722,7 +844,9 @@ ${colors.bright}${colors.cyan}════════════════�
     const { result } = await testStep7_ResolveChallenge(challengeId);
     const { netProfit } = await testStep8_SimulateSettlement(challengeId, result, adminId);
     await testStep9_VerifySettlement(challengeId);
-    testStep10_Summary();
+    await testStep9b_VerifyWalletCredit(challengeId, adminId, result);
+    await testStep10_VerifyWalletOperations(adminId);
+    testStep11_Summary();
 
     console.log(`
 ${colors.cyan}TREASURY STATE AT END${colors.reset}
@@ -735,7 +859,7 @@ ${colors.cyan}TREASURY STATE AT END${colors.reset}
     process.exit(results.failed === 0 ? 0 : 1);
   } catch (error) {
     logError(`Fatal error: ${(error as Error).message}`);
-    testStep10_Summary();
+    testStep11_Summary();
     process.exit(1);
   }
 }

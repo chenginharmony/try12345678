@@ -268,6 +268,35 @@ export const treasuryChallenges = pgTable("treasury_challenges", {
   filledAt: timestamp("filled_at"),
 });
 
+// Treasury wallet per admin - separate from admin wallet
+export const treasuryWallets = pgTable("treasury_wallets", {
+  id: serial("id").primaryKey(),
+  adminId: varchar("admin_id").notNull().unique(), // One wallet per admin
+  balance: decimal("balance", { precision: 15, scale: 2 }).default("0.00"), // Funds available for Treasury
+  totalDeposited: decimal("total_deposited", { precision: 15, scale: 2 }).default("0.00"),
+  totalUsed: decimal("total_used", { precision: 15, scale: 2 }).default("0.00"),
+  totalEarned: decimal("total_earned", { precision: 15, scale: 2 }).default("0.00"), // From wins
+  status: varchar("status").default("active"), // active, frozen
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Treasury wallet transaction history
+export const treasuryWalletTransactions = pgTable("treasury_wallet_transactions", {
+  id: serial("id").primaryKey(),
+  adminId: varchar("admin_id").notNull(),
+  type: varchar("type").notNull(), // deposit, debit, credit, settlement
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  description: text("description"),
+  relatedMatchId: integer("related_match_id"), // treasuryMatches.id if settlement
+  relatedChallengeId: integer("related_challenge_id"), // challenges.id
+  reference: varchar("reference"), // Paystack ref, settlement ref
+  status: varchar("status").default("completed"), // pending, completed, failed
+  balanceBefore: decimal("balance_before", { precision: 15, scale: 2 }),
+  balanceAfter: decimal("balance_after", { precision: 15, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Telegram groups where the bot is added
 export const groups = pgTable("groups", {
   id: serial("id").primaryKey(),
@@ -656,6 +685,17 @@ export const insertTreasuryChallengeSchema = createInsertSchema(treasuryChalleng
   filledAt: true,
 });
 
+export const insertTreasuryWalletSchema = createInsertSchema(treasuryWallets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTreasuryWalletTransactionSchema = createInsertSchema(treasuryWalletTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Platform settings table
 export const platformSettings = pgTable("platform_settings", {
   id: serial("id").primaryKey(),
@@ -828,6 +868,11 @@ export type UserRecommendationProfile = typeof userRecommendationProfiles.$infer
 export type EventRecommendation = typeof eventRecommendations.$inferSelect;
 export type UserEventInteraction = typeof userEventInteractions.$inferSelect;
 export type InsertUserRecommendationProfile = z.infer<typeof insertUserRecommendationProfileSchema>;
+export type TreasuryWallet = typeof treasuryWallets.$inferSelect;
+export type InsertTreasuryWallet = z.infer<typeof insertTreasuryWalletSchema>;
+export type TreasuryWalletTransaction = typeof treasuryWalletTransactions.$inferSelect;
+export type InsertTreasuryWalletTransaction = z.infer<typeof insertTreasuryWalletTransactionSchema>;
+
 // Payout job queue for batched processing
 export const payoutJobs = pgTable("payout_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
