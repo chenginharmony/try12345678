@@ -108,6 +108,12 @@ const adminNavigation = [
     description: "Admin wallet and fund management"
   },
   { 
+    name: "Treasury", 
+    href: "/admin/treasury", 
+    icon: DollarSign,
+    description: "Treasury management and imbalance monitoring"
+  },
+  { 
     name: "Notifications", 
     href: "/admin/notifications", 
     icon: Bell,

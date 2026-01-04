@@ -51,6 +51,7 @@ import AdminNotifications from "@/pages/AdminNotifications";
 import AdminUsersManagement from "./pages/AdminUsersManagement";
 import AdminSettings from "./pages/AdminSettings";
 import AdminWallet from "./pages/AdminWallet";
+import AdminTreasury from "./pages/AdminTreasury";
 
 import { DailyLoginModal } from '@/components/DailyLoginModal';
 import { useDailyLoginPopup } from '@/hooks/useDailyLoginPopup';
@@ -236,6 +237,7 @@ function AppRouter() {
       <Route path="/admin/analytics" component={AdminAnalytics} />
       <Route path="/admin/bonuses" component={AdminBonusConfiguration} />
       <Route path="/admin/wallet" component={AdminWallet} />
+      <Route path="/admin/treasury" component={AdminTreasury} />
       <Route path="/admin/notifications" component={AdminNotifications} />
       <Route path="/admin/users" component={AdminUsersManagement} />
       <Route path="/admin/settings" component={AdminSettings} />

@@ -1,10 +1,10 @@
 import { db } from './db';
 import {
-  treasury_matches,
-  treasury_challenges,
+  treasuryMatches,
+  treasuryChallenges,
   users,
   challenges,
-  pair_queue,
+  pairQueue,
 } from '../shared/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 
