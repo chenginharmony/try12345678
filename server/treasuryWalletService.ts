@@ -31,10 +31,10 @@ export async function createOrGetTreasuryWallet(adminId: string) {
     .insert(treasuryWallets)
     .values({
       adminId,
-      balance: new Decimal('0.00'),
-      totalDeposited: new Decimal('0.00'),
-      totalUsed: new Decimal('0.00'),
-      totalEarned: new Decimal('0.00'),
+      balance: '0.00',
+      totalDeposited: '0.00',
+      totalUsed: '0.00',
+      totalEarned: '0.00',
     })
     .returning();
 
@@ -55,8 +55,8 @@ export async function depositToTreasuryWallet(
   await db
     .update(treasuryWallets)
     .set({
-      balance: newBalance,
-      totalDeposited: newDeposited,
+      balance: newBalance.toString(),
+      totalDeposited: newDeposited.toString(),
       updatedAt: new Date(),
     })
     .where(eq(treasuryWallets.adminId, adminId));
@@ -65,12 +65,12 @@ export async function depositToTreasuryWallet(
   await db.insert(treasuryWalletTransactions).values({
     adminId,
     type: 'deposit',
-    amount: new Decimal(amount),
+    amount: new Decimal(amount).toString(),
     description: `Deposited to Treasury wallet`,
     reference: paystackReference,
     status: 'completed',
-    balanceBefore: new Decimal(wallet.balance),
-    balanceAfter: newBalance,
+    balanceBefore: new Decimal(wallet.balance).toString(),
+    balanceAfter: newBalance.toString(),
   });
 
   return newBalance;
@@ -102,8 +102,8 @@ export async function debitTreasuryWallet(
   await db
     .update(treasuryWallets)
     .set({
-      balance: newBalance,
-      totalUsed: newUsed,
+      balance: newBalance.toString(),
+      totalUsed: newUsed.toString(),
       updatedAt: new Date(),
     })
     .where(eq(treasuryWallets.adminId, adminId));
@@ -112,12 +112,12 @@ export async function debitTreasuryWallet(
   await db.insert(treasuryWalletTransactions).values({
     adminId,
     type: 'debit',
-    amount: new Decimal(amount),
+    amount: new Decimal(amount).toString(),
     description,
     relatedChallengeId: challengeId,
     status: 'completed',
-    balanceBefore: walletBalance,
-    balanceAfter: newBalance,
+    balanceBefore: walletBalance.toString(),
+    balanceAfter: newBalance.toString(),
   });
 
   return newBalance;
@@ -146,8 +146,8 @@ export async function creditTreasuryWallet(
   await db
     .update(treasuryWallets)
     .set({
-      balance: newBalance,
-      totalEarned: newEarned,
+      balance: newBalance.toString(),
+      totalEarned: newEarned.toString(),
       updatedAt: new Date(),
     })
     .where(eq(treasuryWallets.adminId, adminId));
@@ -156,13 +156,13 @@ export async function creditTreasuryWallet(
   await db.insert(treasuryWalletTransactions).values({
     adminId,
     type: 'credit',
-    amount: new Decimal(amount),
+    amount: new Decimal(amount).toString(),
     description,
     relatedChallengeId: challengeId,
     relatedMatchId: matchId,
     status: 'completed',
-    balanceBefore: new Decimal(wallet.balance),
-    balanceAfter: newBalance,
+    balanceBefore: new Decimal(wallet.balance).toString(),
+    balanceAfter: newBalance.toString(),
   });
 
   return newBalance;

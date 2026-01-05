@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Wallet, Plus, History, TrendingUp, TrendingDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAdminQuery, adminApiRequest } from '@/lib/adminApi';
 
 interface TreasuryWallet {
   balance: string;
@@ -41,58 +42,42 @@ interface Transaction {
 }
 
 interface TreasuryWalletPanelProps {
-  adminId: string;
+  adminUser: {
+    id: string;
+    username: string;
+    firstName: string;
+    email: string;
+    isAdmin: boolean;
+  };
 }
 
 export const TreasuryWalletPanel: React.FC<TreasuryWalletPanelProps> = ({
-  adminId,
+  adminUser,
 }) => {
   const [depositAmount, setDepositAmount] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch wallet balance
-  const { data: wallet, isLoading: walletLoading } = useQuery({
-    queryKey: ['treasuryWallet', adminId],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/treasury/wallet?adminId=${adminId}`);
-      if (!res.ok) throw new Error('Failed to fetch wallet');
-      return res.json() as Promise<TreasuryWallet>;
-    },
-    refetchInterval: 30000,
+  const { data: wallet, isLoading: walletLoading, error: walletError } = useAdminQuery(`/api/admin/treasury/wallet`, {
+    retry: false,
   });
 
   // Fetch transactions
-  const { data: transactions } = useQuery({
-    queryKey: ['treasuryWalletTransactions', adminId],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/admin/treasury/wallet/transactions?adminId=${adminId}&limit=20`
-      );
-      if (!res.ok) throw new Error('Failed to fetch transactions');
-      return res.json() as Promise<Transaction[]>;
-    },
-    refetchInterval: 30000,
+  const { data: transactions } = useAdminQuery(`/api/admin/treasury/wallet/transactions?limit=20`, {
+    retry: false,
   });
 
   // Initiate deposit
   const initiateDepositMutation = useMutation({
     mutationFn: async (amount: number) => {
-      const res = await fetch('/api/admin/treasury/wallet/deposit/initiate', {
+      return adminApiRequest('/api/admin/treasury/wallet/deposit/initiate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
-          email: adminId, // Would be actual email in production
+          email: adminUser.email,
         }),
       });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to initiate deposit');
-      }
-
-      return res.json();
     },
     onSuccess: (data) => {
       // Redirect to Paystack
@@ -117,14 +102,29 @@ export const TreasuryWalletPanel: React.FC<TreasuryWalletPanelProps> = ({
     return <div className="flex items-center justify-center h-96">Loading...</div>;
   }
 
-  if (!wallet) {
+  if (walletError) {
     return (
-      <Card>
+      <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
-          <CardTitle>Treasury Wallet</CardTitle>
+          <CardTitle className="text-white">Treasury Wallet</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Failed to load wallet</p>
+          <p className="text-slate-400">
+            {walletError instanceof Error ? walletError.message : 'Failed to load wallet'}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!wallet) {
+    return (
+      <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Treasury Wallet</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-slate-400">No treasury wallet found. Please contact support.</p>
         </CardContent>
       </Card>
     );
@@ -138,15 +138,15 @@ export const TreasuryWalletPanel: React.FC<TreasuryWalletPanelProps> = ({
   return (
     <div className="space-y-6">
       {/* Main Balance Card */}
-      <Card className="border-2 border-primary">
+      <Card className="border-2 border-primary bg-slate-800 border-slate-700">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-white">
                 <Wallet className="h-5 w-5" />
                 Treasury Wallet
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-slate-400">
                 Your dedicated Treasury fund for matching bets
               </CardDescription>
             </div>

@@ -72,7 +72,7 @@ export const TreasuryChallengesMonitor: React.FC<TreasuryChallengesMonitorProps>
 
   if (challengesLoading) {
     return (
-      <Card>
+      <Card className="bg-slate-800 border-slate-700">
         <CardContent className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </CardContent>
@@ -82,19 +82,19 @@ export const TreasuryChallengesMonitor: React.FC<TreasuryChallengesMonitorProps>
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-white">
             <AlertCircle className="h-5 w-5 mr-2" />
             Active Challenges Imbalance Monitor
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-slate-400">
             Monitor imbalances in admin-created challenges and fill with treasury matches
           </CardDescription>
         </CardHeader>
         <CardContent>
           {activeChallenges.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-slate-400">
               No active challenges found
             </div>
           ) : (
@@ -139,7 +139,7 @@ const ChallengeImbalanceCard: React.FC<ChallengeImbalanceCardProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h4 className="font-medium">{challenge.title}</h4>
-              <p className="text-sm text-muted-foreground">Loading imbalance data...</p>
+              <p className="text-sm text-slate-400">Loading imbalance data...</p>
             </div>
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
           </div>
@@ -176,12 +176,12 @@ const ChallengeImbalanceCard: React.FC<ChallengeImbalanceCardProps> = ({
             <h4 className="font-medium">{challenge.title}</h4>
             <div className="flex items-center gap-2 mt-1">
               {getStatusBadge()}
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-slate-400">
                 {yesCount + noCount} participants
               </span>
             </div>
           </div>
-          <div className="text-right text-sm text-muted-foreground">
+          <div className="text-right text-sm text-slate-400">
             Entry: ₦{parseFloat(challenge.entryFee).toLocaleString()}
           </div>
         </div>
@@ -235,7 +235,7 @@ const ChallengeImbalanceCard: React.FC<ChallengeImbalanceCardProps> = ({
         )}
 
         {!treasuryConfig && hasImbalance && (
-          <div className="text-sm text-muted-foreground bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
+          <div className="text-sm text-slate-400 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
             Configure treasury settings to enable automatic balancing
           </div>
         )}

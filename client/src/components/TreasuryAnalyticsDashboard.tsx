@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { adminApiRequest } from '@/lib/adminApi';
 import {
   DailyPnL,
   ChallengeAnalytics,
@@ -66,75 +67,59 @@ export const TreasuryAnalyticsDashboard: React.FC<TreasuryAnalyticsDashboardProp
   const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
 
   // Fetch metrics
-  const { data: metrics } = useQuery({
-    queryKey: ['treasuryMetrics', adminId],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/treasury/analytics/metrics?adminId=${adminId}`);
-      if (!res.ok) throw new Error('Failed to fetch metrics');
-      return res.json() as Promise<TreasuryMetrics>;
-    },
+  const { data: metrics } = useAdminQuery('/api/admin/treasury/analytics/metrics', {
     refetchInterval: 30000,
   });
 
   // Fetch daily trends
-  const { data: dailyTrends } = useQuery({
-    queryKey: ['treasuryDailyTrends', dateRange, adminId],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/admin/treasury/analytics/daily-trends?range=${dateRange}&adminId=${adminId}`
-      );
-      if (!res.ok) throw new Error('Failed to fetch daily trends');
-      return res.json() as Promise<DailyPnL[]>;
-    },
+  const { data: dailyTrends } = useAdminQuery(`/api/admin/treasury/analytics/daily-trends?range=${dateRange}`, {
     refetchInterval: 30000,
   });
 
   // Fetch challenge analytics
-  const { data: challengeAnalytics } = useQuery({
-    queryKey: ['treasuryChallengeAnalytics', adminId],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/treasury/analytics/challenges?adminId=${adminId}`);
-      if (!res.ok) throw new Error('Failed to fetch challenge analytics');
-      return res.json() as Promise<ChallengeAnalytics[]>;
-    },
+  const { data: challengeAnalytics } = useAdminQuery('/api/admin/treasury/analytics/challenges', {
     refetchInterval: 30000,
   });
 
   // Fetch user performance
-  const { data: userPerformance } = useQuery({
-    queryKey: ['treasuryUserPerformance', adminId],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/treasury/analytics/user-performance?adminId=${adminId}`);
-      if (!res.ok) throw new Error('Failed to fetch user performance');
-      return res.json() as Promise<PerformanceByUser[]>;
-    },
+  const { data: userPerformance } = useAdminQuery('/api/admin/treasury/analytics/user-performance', {
     refetchInterval: 30000,
   });
 
   // Fetch risk analysis
-  const { data: riskAnalysis } = useQuery({
-    queryKey: ['treasuryRiskAnalysis', adminId],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/treasury/analytics/risk-analysis?adminId=${adminId}`);
-      if (!res.ok) throw new Error('Failed to fetch risk analysis');
-      return res.json() as Promise<RiskAnalysis[]>;
-    },
+  const { data: riskAnalysis } = useAdminQuery('/api/admin/treasury/analytics/risk-analysis', {
     refetchInterval: 30000,
   });
 
   const handleExport = async () => {
-    const res = await fetch(`/api/admin/treasury/analytics/export?format=${exportFormat}&adminId=${adminId}`);
-    if (!res.ok) return;
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `treasury-analytics-${new Date().toISOString().split('T')[0]}.${exportFormat}`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    try {
+      const response = await adminApiRequest(`/api/admin/treasury/analytics/export?format=${exportFormat}`);
+      
+      if (exportFormat === 'json') {
+        const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `treasury-analytics-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        // For CSV, the response should be the CSV content
+        const blob = new Blob([response], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `treasury-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
   };
 
   if (!metrics || !dailyTrends || !challengeAnalytics) {
@@ -201,52 +186,52 @@ export const TreasuryAnalyticsDashboard: React.FC<TreasuryAnalyticsDashboardProp
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Matches</CardTitle>
+            <CardTitle className="text-sm font-medium text-white">Total Matches</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.total_matches}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-2xl font-bold text-white">{metrics.total_matches}</div>
+            <p className="text-xs text-slate-400 mt-1">
               {metrics.pending_settlement} pending settlement
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-white">Win Rate</CardTitle>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${winRateColor}`}>
               {metrics.overall_win_rate.toFixed(1)}%
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               {Math.round(metrics.total_matches_settled * (metrics.overall_win_rate / 100))} wins
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Net P&L</CardTitle>
+            <CardTitle className="text-sm font-medium text-white">Net P&L</CardTitle>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${netPnLColor}`}>
               ₦{(metrics.total_net_pnl / 1000).toFixed(1)}K
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               {metrics.days_active} days active
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Avg Match Size</CardTitle>
+            <CardTitle className="text-sm font-medium text-white">Avg Match Size</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-white">
               ₦{(metrics.avg_match_size / 1000).toFixed(1)}K
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -275,10 +260,10 @@ export const TreasuryAnalyticsDashboard: React.FC<TreasuryAnalyticsDashboardProp
 
         {/* Daily Trends Tab */}
         <TabsContent value="trends" className="space-y-4">
-          <Card>
+          <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle>Daily P&L Trend</CardTitle>
-              <CardDescription>Net profit/loss by day</CardDescription>
+              <CardTitle className="text-white">Daily P&L Trend</CardTitle>
+              <CardDescription className="text-slate-400">Net profit/loss by day</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>

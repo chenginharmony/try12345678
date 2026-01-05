@@ -2388,13 +2388,12 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
   });
 
   // Treasury Analytics Routes
-  app.get('/api/admin/treasury/analytics/metrics', PrivyAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/admin/treasury/analytics/metrics', adminAuth, async (req: AdminAuthRequest, res) => {
     try {
-      const adminId = req.query.adminId as string;
-      const userId = getUserId(req);
+      const adminId = req.user?.id;
 
-      if (!adminId || adminId !== userId) {
-        return res.status(403).json({ message: 'Unauthorized' });
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
       }
 
       const { getTreasuryMetrics } = await import('./treasuryAnalytics');
@@ -2407,14 +2406,13 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
-  app.get('/api/admin/treasury/analytics/daily-trends', PrivyAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/admin/treasury/analytics/daily-trends', adminAuth, async (req: AdminAuthRequest, res) => {
     try {
-      const adminId = req.query.adminId as string;
+      const adminId = req.user?.id;
       const range = req.query.range as string || '30d';
-      const userId = getUserId(req);
 
-      if (!adminId || adminId !== userId) {
-        return res.status(403).json({ message: 'Unauthorized' });
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
       }
 
       const { getDailyPnLTrends } = await import('./treasuryAnalytics');
@@ -2438,13 +2436,12 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
-  app.get('/api/admin/treasury/analytics/challenges', PrivyAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/admin/treasury/analytics/challenges', adminAuth, async (req: AdminAuthRequest, res) => {
     try {
-      const adminId = req.query.adminId as string;
-      const userId = getUserId(req);
+      const adminId = req.user?.id;
 
-      if (!adminId || adminId !== userId) {
-        return res.status(403).json({ message: 'Unauthorized' });
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
       }
 
       const { getChallengeAnalytics } = await import('./treasuryAnalytics');
@@ -2457,13 +2454,12 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
-  app.get('/api/admin/treasury/analytics/user-performance', PrivyAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/admin/treasury/analytics/user-performance', adminAuth, async (req: AdminAuthRequest, res) => {
     try {
-      const adminId = req.query.adminId as string;
-      const userId = getUserId(req);
+      const adminId = req.user?.id;
 
-      if (!adminId || adminId !== userId) {
-        return res.status(403).json({ message: 'Unauthorized' });
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
       }
 
       const { getPerformanceByUser } = await import('./treasuryAnalytics');
@@ -2476,13 +2472,12 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
-  app.get('/api/admin/treasury/analytics/risk-analysis', PrivyAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/admin/treasury/analytics/risk-analysis', adminAuth, async (req: AdminAuthRequest, res) => {
     try {
-      const adminId = req.query.adminId as string;
-      const userId = getUserId(req);
+      const adminId = req.user?.id;
 
-      if (!adminId || adminId !== userId) {
-        return res.status(403).json({ message: 'Unauthorized' });
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
       }
 
       const { getRiskAnalysis } = await import('./treasuryAnalytics');
@@ -2495,14 +2490,13 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
-  app.get('/api/admin/treasury/analytics/export', PrivyAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/admin/treasury/analytics/export', adminAuth, async (req: AdminAuthRequest, res) => {
     try {
-      const adminId = req.query.adminId as string;
+      const adminId = req.user?.id;
       const format = (req.query.format as string) || 'csv';
-      const userId = getUserId(req);
 
-      if (!adminId || adminId !== userId) {
-        return res.status(403).json({ message: 'Unauthorized' });
+      if (!adminId) {
+        return res.status(401).json({ message: 'Unauthorized' });
       }
 
       const { exportAnalyticsData } = await import('./treasuryAnalytics');

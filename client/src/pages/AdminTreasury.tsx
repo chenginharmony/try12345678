@@ -5,7 +5,7 @@ import TreasuryAnalyticsDashboard from "@/components/TreasuryAnalyticsDashboard"
 import TreasuryChallengesMonitor from "@/components/TreasuryChallengesMonitor";
 
 export default function AdminTreasury() {
-  const { isAdmin, isLoading } = useAdminAuth();
+  const { isAdmin, isLoading, adminUser } = useAdminAuth();
 
   if (isLoading) {
     return (
@@ -39,13 +39,13 @@ export default function AdminTreasury() {
         </div>
 
         {/* Treasury Wallet Panel */}
-        <TreasuryWalletPanel adminId={user.id} />
+        <TreasuryWalletPanel adminUser={adminUser!} />
 
         {/* Active Challenges Imbalance Monitor */}
-        <TreasuryChallengesMonitor adminId={user.id} />
+        <TreasuryChallengesMonitor adminId={adminUser!.id} />
 
         {/* Treasury Analytics Dashboard */}
-        <TreasuryAnalyticsDashboard adminId={user.id} />
+        <TreasuryAnalyticsDashboard adminId={adminUser!.id} />
       </div>
     </AdminLayout>
   );
